@@ -196,7 +196,7 @@
     input[type="text"]:focus,
     input[type="email"]:focus,
     input[type="tel"]:focus {
-      border-color: #66afe9; /* Rahmenfarbe im Fokus */
+      border-color: #4caf50; /* Rahmenfarbe im Fokus */
       outline: 0;
       box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
     }
