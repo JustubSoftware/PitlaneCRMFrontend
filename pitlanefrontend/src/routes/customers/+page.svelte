@@ -1,4 +1,8 @@
 <!-- src/routes/customers/+page.svelte -->
+<svelte:head>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+</svelte:head>
+
 <script>
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
@@ -12,6 +16,7 @@
 
   let showModal = false;
   let newCustomer = {
+    id: null,
     first_name: '',
     last_name: '',
     email: '',
@@ -19,17 +24,15 @@
     address: ''
   };
 
-  // Funktion zum Abrufen der Kunden aus der API
+  let confirmDelete = false;
+  let customerToDelete = null;
+
   const fetchCustomers = async () => {
     loading = true;
     error = null;
     try {
       const response = await fetch(`${API_BASE_URL}/customers`);
-
-      if (!response.ok) {
-        throw new Error(`API-Fehler: ${response.status} - ${response.statusText}`);
-      }
-
+      if (!response.ok) throw new Error(`API-Fehler: ${response.status} - ${response.statusText}`);
       customers = await response.json();
     } catch (e) {
       error = e.message;
@@ -38,47 +41,74 @@
     }
   };
 
-  // Funktion zum Hinzufügen eines neuen Kunden über die API
   const addCustomer = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/customers`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCustomer)
       });
-
-      if (!response.ok) {
-        throw new Error(`API-Fehler: ${response.status} - ${response.statusText}`);
-      }
-
+      if (!response.ok) throw new Error(`API-Fehler: ${response.status} - ${response.statusText}`);
       showModal = false;
-      newCustomer = { first_name: '', last_name: '', email: '', phone: '', address: '' };
+      newCustomer = { id: null, first_name: '', last_name: '', email: '', phone: '', address: '' };
       await fetchCustomers();
     } catch (e) {
       error = e.message;
-    } finally {
-      loading = false;
     }
   };
 
-  // Funktion zum Löschen eines Kunden über die API
-  const deleteCustomer = async (id) => {
+  const editCustomer = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers/${id}/`, {
-        method: 'DELETE'
+      const response = await fetch(`${API_BASE_URL}/customers/${newCustomer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer)
       });
-
-      if (!response.ok) {
-        throw new Error(`API-Fehler: ${response.status} - ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`API-Fehler: ${response.status} - ${response.statusText}`);
+      showModal = false;
+      newCustomer = { id: null, first_name: '', last_name: '', email: '', phone: '', address: '' };
       await fetchCustomers();
     } catch (e) {
       error = e.message;
-    } finally {
-      loading = false;
     }
+  };
+
+  const openDeleteConfirmation = (customer) => {
+    confirmDelete = true;
+    customerToDelete = customer;
+  };
+
+  const cancelDelete = () => {
+    confirmDelete = false;
+    customerToDelete = null;
+  };
+
+  const confirmAndDelete = async () => {
+    if (customerToDelete) {
+      await deleteCustomer(customerToDelete.id);
+      confirmDelete = false;
+      customerToDelete = null;
+    }
+  };
+
+  const deleteCustomer = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/customers/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(`API-Fehler: ${response.status} - ${response.statusText}`);
+      await fetchCustomers();
+    } catch (e) {
+      error = e.message;
+    }
+  };
+
+  const openEditModal = (customer) => {
+    newCustomer = { ...customer };
+    showModal = true;
+  };
+
+  const closeModal = () => {
+    showModal = false;
+    newCustomer = { id: null, first_name: '', last_name: '', email: '', phone: '', address: '' };
   };
 
   onMount(fetchCustomers);
@@ -109,7 +139,10 @@
       <h2 class="text-2xl font-bold text-white mb-4">
         Kunden erstellen
         <button
-          on:click={() => showModal = true}
+          on:click={() => {
+            newCustomer = { id: null, first_name: '', last_name: '', email: '', phone: '', address: '' };
+            showModal = true;
+          }}
           class="ml-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-green-300"
         >
           Neuen Kunden hinzufügen
@@ -137,20 +170,30 @@
           </thead>
           <tbody>
             {#each customers as customer (customer.id)}
-              <tr class="text-white hover:bg-gray-700 transition-colors duration-200 underline-offset-4 hover:underline">
+              <tr class="text-white hover:bg-gray-700 transition-colors duration-200" class:underline-offset-4={false} class:hover:underline={false}>
                 <td class="py-4 px-4">{customer.id}</td>
                 <td class="py-4 px-4">{customer.first_name}</td>
                 <td class="py-4 px-4">{customer.last_name}</td>
                 <td class="py-4 px-4">{customer.email}</td>
                 <td class="py-4 px-4">{customer.phone}</td>
                 <td class="py-4 px-4">{customer.address}</td>
-                <td class="py-4 px-4">
-                  <button
-                    on:click={() => deleteCustomer(customer.id)}
-                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-red-300"
+                <td class="py-4 px-4 whitespace-nowrap">
+                  <span
+                    on:click={() => openEditModal(customer)}
+                    class="material-icons text-blue-500 hover:text-blue-600 cursor-pointer align-middle"
+                    title="Bearbeiten"
+                    style="font-size: 20px; vertical-align: middle;"
                   >
-                    Löschen
-                  </button>
+                    edit
+                  </span>
+                  <span
+                    on:click={() => openDeleteConfirmation(customer)}
+                    class="material-icons text-red-500 hover:text-red-600 cursor-pointer align-middle"
+                    title="Löschen"
+                    style="font-size: 20px; vertical-align: middle;"
+                  >
+                    delete
+                  </span>
                 </td>
               </tr>
             {/each}
@@ -160,12 +203,10 @@
     {/if}
 
     {#if showModal}
-      <!-- Modal-Overlay -->
       <div class="absolute inset-0 overflow-y-auto h-full w-full" id="my-modal" transition:fade>
-        <!-- Modal Inhalt -->
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
           <div class="mt-3 text-center">
-            <h3 class="text-lg leading-6 font-medium text-white">Neuen Kunden hinzufügen</h3>
+            <h3 class="text-lg leading-6 font-medium text-white">{newCustomer.id ? 'Kunden bearbeiten' : 'Neuen Kunden hinzufügen'}</h3>
             <div class="mt-2">
               <label for="first_name" class="block text-white text-sm font-bold mb-2">Vorname:</label>
               <input
@@ -208,19 +249,55 @@
               />
             </div>
             <div class="items-center px-4 py-3">
-              <button
-                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-green-300 mr-2"
-                on:click={addCustomer}
-              >
-                Hinzufügen
-              </button>
+              {#if newCustomer.id}
+                <button
+                  class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-blue-300 mr-2"
+                  on:click={editCustomer}
+                >
+                  Speichern
+                </button>
+              {:else}
+                <button
+                  class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-green-300 mr-2"
+                  on:click={addCustomer}
+                >
+                  Hinzufügen
+                </button>
+              {/if}
               <button
                 class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-red-300"
-                on:click={() => showModal = false}
+                on:click={closeModal}
               >
                 Abbrechen
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if confirmDelete}
+      <div class="fixed inset-0 flex items-center justify-center bg-gray-600 bg-opacity-50">
+        <div class="bg-gray-800 p-8 rounded-md shadow-lg text-center">
+          <span class="material-icons text-yellow-500 mx-auto mb-4" style="font-size:48px">
+            warning
+          </span>
+          <p class="text-white mb-4">
+            Möchten Sie diesen Kunden wirklich löschen?
+          </p>
+          <div class="flex justify-center gap-4">
+            <button
+              on:click={confirmAndDelete}
+              class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-red-300"
+            >
+              Löschen
+            </button>
+            <button
+              on:click={cancelDelete}
+              class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-gray-300"
+            >
+              Abbrechen
+            </button>
           </div>
         </div>
       </div>
@@ -280,7 +357,7 @@
   input[type="text"],
   input[type="email"],
   input[type="tel"] {
-    border: 2px solid #ccc; /* Standardrahmenfarbe */
+    border: 2px solid #ccc;
     border-radius: 5px;
     padding: 8px;
     margin-bottom: 10px;
@@ -291,8 +368,13 @@
   input[type="text"]:focus,
   input[type="email"]:focus,
   input[type="tel"]:focus {
-    border-color: #4caf50; /* Rahmenfarbe im Fokus */
+    border-color: #4caf50;
     outline: 0;
     box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+  }
+
+  /* Entferne Unterstreichung beim Hover */
+  tr.hover\:bg-gray-700:hover {
+    text-decoration: none;
   }
 </style>
