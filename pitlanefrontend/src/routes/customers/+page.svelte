@@ -306,7 +306,7 @@
     <div class="mt-8">
       <a
         href="/"
-        class="text-blue-400 hover:text-blue-500 transition-colors duration-200 underline-offset-4 hover:underline"
+        class="text-green-500 hover:text-green-800 transition-colors duration-200 underline-offset-4 hover:underline"
       >
         Zurück zur Startseite
       </a>
