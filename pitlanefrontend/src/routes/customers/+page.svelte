@@ -180,7 +180,7 @@
                 <td class="py-4 px-4 whitespace-nowrap">
                   <span
                     on:click={() => openEditModal(customer)}
-                    class="material-icons text-green-500 hover:text-blue-600 cursor-pointer align-middle"
+                    class="material-icons text-green-500 hover:text-green-800 cursor-pointer align-middle"
                     title="Bearbeiten"
                     style="font-size: 20px; vertical-align: middle;"
                   >
@@ -188,7 +188,7 @@
                   </span>
                   <span
                     on:click={() => openDeleteConfirmation(customer)}
-                    class="material-icons text-red-500 hover:text-red-600 cursor-pointer align-middle"
+                    class="material-icons text-red-500 hover:text-red-800 cursor-pointer align-middle"
                     title="Löschen"
                     style="font-size: 20px; vertical-align: middle;"
                   >
