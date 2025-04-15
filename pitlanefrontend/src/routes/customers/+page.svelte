@@ -1,6 +1,7 @@
 <!-- src/routes/customers/+page.svelte -->
 <script>
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
 
   let customers = [];
   let loading = true;
@@ -160,7 +161,7 @@
 
     {#if showModal}
       <!-- Modal-Overlay -->
-      <div class="absolute inset-0 overflow-y-auto h-full w-full" id="my-modal">
+      <div class="absolute inset-0 overflow-y-auto h-full w-full" id="my-modal" transition:fade>
         <!-- Modal Inhalt -->
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
           <div class="mt-3 text-center">
