@@ -4,6 +4,7 @@
 
 <script>
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
 
   let vehicles = [];
   let customers = [];
@@ -235,7 +236,7 @@
     {/if}
 
     {#if showModal}
-      <div class="absolute inset-0 overflow-y-auto h-full w-full" id="vehicle-modal">
+      <div class="absolute inset-0 overflow-y-auto h-full w-full" id="vehicle-modal" transition:fade>
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
           <div class="mt-3 text-center">
             <h3 class="text-lg leading-6 font-medium text-white">{newVehicle.id ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug hinzufügen'}</h3>
