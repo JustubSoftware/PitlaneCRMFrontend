@@ -17,7 +17,7 @@
     model: '',
     year: '',
     vin: '',
-    customer_id: ''
+    customer: ''  // Wichtig: Dies sollte mit dem Backend übereinstimmen
   };
 
   let confirmDelete = false;
@@ -47,14 +47,28 @@
   // Fahrzeug hinzufügen
   const addVehicle = async () => {
     try {
+      const payload = {
+        brand: newVehicle.brand,
+        model: newVehicle.model,
+        year: parseInt(newVehicle.year, 10),
+        vin: newVehicle.vin,
+        customer: parseInt(newVehicle.customer, 10)  // Wichtig: Dies sollte mit dem Backend übereinstimmen
+      };
+
+      console.log('Adding Vehicle Payload:', JSON.stringify(payload, null, 2));
       const response = await fetch(`${API_BASE_URL}/vehicles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newVehicle)
+        body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error(`API-Fehler: ${response.status}`);
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('Backend-Fehler:', errText);
+        throw new Error(`API-Fehler: ${response.status}`);
+      }
       showModal = false;
-      newVehicle = { id: null, brand: '', model: '', year: '', vin:'', customer_id: '' };
+      newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer: '' };
       await fetchVehicles();
     } catch (e) {
       error = e.message;
@@ -64,29 +78,37 @@
   // Fahrzeug bearbeiten
   const editVehicle = async () => {
     try {
+      const payload = {
+        brand: newVehicle.brand,
+        model: newVehicle.model,
+        year: parseInt(newVehicle.year, 10),  // Wichtig: Konvertiere zu einer Zahl
+        vin: newVehicle.vin,
+        customer: parseInt(newVehicle.customer, 10)  // Wichtig: Dies sollte mit dem Backend übereinstimmen
+      };
       const response = await fetch(`${API_BASE_URL}/vehicles/${newVehicle.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newVehicle)
+        body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error(`API-Fehler: ${response.status}`);
       showModal = false;
-      newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer_id: '' };
+      newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer: '' };
       await fetchVehicles();
     } catch (e) {
       error = e.message;
     }
   };
 
-  // Löschen mit Bestätigungsdialog
   const openDeleteConfirmation = (vehicle) => {
     confirmDelete = true;
     vehicleToDelete = vehicle;
   };
+
   const cancelDelete = () => {
     confirmDelete = false;
     vehicleToDelete = null;
   };
+
   const confirmAndDelete = async () => {
     if (vehicleToDelete) {
       await deleteVehicle(vehicleToDelete.id);
@@ -94,6 +116,7 @@
       vehicleToDelete = null;
     }
   };
+
   const deleteVehicle = async (id) => {
     try {
       const response = await fetch(`${API_BASE_URL}/vehicles/${id}`, { method: 'DELETE' });
@@ -107,15 +130,23 @@
   // Modal öffnen
   const openEditModal = (vehicle) => {
     if (vehicle) {
-      newVehicle = { ...vehicle };
+      newVehicle = {
+        id: vehicle.id,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        year: String(vehicle.year),  // Wichtig: Behandle year als String
+        vin: vehicle.vin,
+        customer: vehicle.customer?.id || ''  // Wichtig: Verwende 'customer'
+      };
     } else {
-      newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer_id: vehicle.customer.id || '' };
+      newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer: customers[0]?.id || '' };
     }
     showModal = true;
   };
+
   const closeModal = () => {
     showModal = false;
-    newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer_id: '' };
+    newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer: '' };
   };
 
   onMount(fetchVehicles);
@@ -125,7 +156,7 @@
   <main class="relative z-10 container mx-auto px-4 py-16 min-h-screen flex flex-col items-center">
     <div class="text-center mb-8">
       <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-500 mb-4">
-        Fahrzeugverwaltung
+        Fahrzeug Manager
       </h1>
       <p class="text-xl text-gray-300 font-medium">
         Verwalte deine Fahrzeuge und ordne sie Kunden zu
@@ -134,9 +165,12 @@
 
     <div class="w-full max-w-4xl mb-8">
       <h2 class="text-2xl font-bold text-white mb-4">
-        Fahrzeug erstellen
+        Fahrzeuge erstellen
         <button
-          on:click={() => openEditModal()}
+          on:click={() => {
+            newVehicle = { id: null, brand: '', model: '', year: '', vin: '', customer_id: customers[0]?.id || '' };
+            showModal = true;
+          }}
           class="ml-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-blue-300"
         >
           Neues Fahrzeug hinzufügen
@@ -159,7 +193,6 @@
               <th class="py-3 px-4 border-b border-gray-700 text-left">Baujahr</th>
               <th class="py-3 px-4 border-b border-gray-700 text-left">VIN</th>
               <th class="py-3 px-4 border-b border-gray-700 text-left">Kunde</th>
-              <th class="py-3 px-4 border-b border-gray-700 text-left">Email</th>
               <th class="py-3 px-4 border-b border-gray-700 text-left">Aktionen</th>
             </tr>
           </thead>
@@ -170,13 +203,14 @@
                 <td class="py-4 px-4">{vehicle.brand}</td>
                 <td class="py-4 px-4">{vehicle.model}</td>
                 <td class="py-4 px-4">{vehicle.year}</td>
-                <td class="py-4 px-4 font-mono text-sm">{vehicle.vin}</td>
+                <td class="py-4 px-4">{vehicle.vin}</td>
                 <td class="py-4 px-4">
-                  {vehicle.owner.first_name} {vehicle.owner.last_name}
+                  {vehicle.customer
+                    ? `${vehicle.customer.first_name} ${vehicle.customer.last_name}`
+                    : ''}
                 </td>
-                <td class="py-4 px-4">{vehicle.owner.email}</td>
                 <td class="py-4 px-4 whitespace-nowrap">
-                         <span
+                  <span
                     on:click={() => openEditModal(vehicle)}
                     class="material-icons text-blue-500 hover:text-blue-600 cursor-pointer align-middle mr-2"
                     title="Bearbeiten"
@@ -201,97 +235,92 @@
     {/if}
 
     {#if showModal}
-      <div class="absolute inset-0 overflow-y-auto h-full w-full bg-opacity-50 flex items-center justify-center z-50" id="vehicle-modal">
-        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 w-full max-w-md">
-          <h3 class="text-xl font-bold text-white mb-4">
-            {newVehicle.id ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug hinzufügen'}
-          </h3>
-          <div class="space-y-4">
-            <div>
-              <label for="make" class="block text-white text-sm font-bold mb-2">Hersteller:</label>
+      <div class="absolute inset-0 overflow-y-auto h-full w-full" id="vehicle-modal">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
+          <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-white">{newVehicle.id ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug hinzufügen'}</h3>
+            <div class="mt-2">
+              <label for="brand" class="block text-white text-sm font-bold mb-2">Hersteller:</label>
               <input
                 type="text"
-                id="make"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                id="brand"
+                class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring focus:ring-blue-500 bg-white hover:border-blue-400"
                 bind:value={newVehicle.brand}
-                required
               />
-            </div>
-            <div>
+
               <label for="model" class="block text-white text-sm font-bold mb-2">Modell:</label>
               <input
                 type="text"
                 id="model"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring focus:ring-blue-500 bg-white hover:border-blue-400"
                 bind:value={newVehicle.model}
-                required
               />
-            </div>
-            <div>
+
               <label for="year" class="block text-white text-sm font-bold mb-2">Baujahr:</label>
               <input
                 type="number"
                 id="year"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring focus:ring-blue-500 bg-white hover:border-blue-400"
                 bind:value={newVehicle.year}
-                min="1900"
-                max={new Date().getFullYear() + 1}
-                required
               />
-            </div>
-            <div>
+
               <label for="vin" class="block text-white text-sm font-bold mb-2">VIN:</label>
               <input
                 type="text"
                 id="vin"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring focus:ring-blue-500 bg-white hover:border-blue-400"
                 bind:value={newVehicle.vin}
-                required
               />
-            </div>
-            <div>
+
               <label for="customer_id" class="block text-white text-sm font-bold mb-2">Kunde:</label>
               <select
                 id="customer_id"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring focus:ring-blue-500 bg-white hover:border-blue-400"
                 bind:value={newVehicle.customer_id}
-                required
               >
                 {#each customers as customer}
                   <option value={customer.id}>
-                    {customer.first_name} {customer.last_name} 
-                    (ID: {customer.id}, Tel: {customer.phone})
+                    {customer.first_name} {customer.last_name} (ID: {customer.id})
                   </option>
                 {/each}
               </select>
             </div>
-          </div>
-          <div class="flex justify-end space-x-3 mt-6">
-            <button
-              on:click={closeModal}
-              class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-            >
-              Abbrechen
-            </button>
-            <button
-              on:click={newVehicle.id ? editVehicle : addVehicle}
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              {newVehicle.id ? 'Speichern' : 'Hinzufügen'}
-            </button>
+            <div class="items-center px-4 py-3">
+              {#if newVehicle.id}
+                <button
+                  class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-blue-300 mr-2"
+                  on:click={editVehicle}
+                >
+                  Speichern
+                </button>
+              {:else}
+                <button
+                  class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-green-300 mr-2"
+                  on:click={addVehicle}
+                >
+                  Hinzufügen
+                </button>
+              {/if}
+              <button
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring focus:ring-red-300"
+                on:click={closeModal}
+              >
+                Abbrechen
+              </button>
+            </div>
           </div>
         </div>
       </div>
     {/if}
 
     {#if confirmDelete}
-      <div class="fixed inset-0 flex items-center justify-center bg-gray-600 bg-opacity-50 z-50">
+      <div class="fixed inset-0 flex items-center justify-center bg-gray-600 bg-opacity-50">
         <div class="bg-gray-800 p-8 rounded-md shadow-lg text-center">
-          <span class="material-icons text-yellow-500 mb-4" style="font-size:48px">
+          <span class="material-icons text-yellow-500 mx-auto mb-4" style="font-size:48px">
             warning
           </span>
           <p class="text-white mb-4">
-            Möchten Sie das Fahrzeug wirklich löschen?
+            Möchten Sie dieses Fahrzeug wirklich löschen?
           </p>
           <div class="flex justify-center gap-4">
             <button
