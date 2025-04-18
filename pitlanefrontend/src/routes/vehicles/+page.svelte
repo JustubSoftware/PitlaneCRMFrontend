@@ -17,7 +17,7 @@
     model: '',
     year: '',
     vin: '',
-    customer: ''  // Wichtig: Dies sollte mit dem Backend übereinstimmen
+    customer: ''
   };
 
   let confirmDelete = false;
@@ -276,7 +276,7 @@
               <select
                 id="customer_id"
                 class="shadow appearance-none border border-blue-500 rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring focus:ring-blue-500 bg-white hover:border-blue-400"
-                bind:value={newVehicle.customer_id}
+                bind:value={newVehicle.customer}
               >
                 {#each customers as customer}
                   <option value={customer.id}>
